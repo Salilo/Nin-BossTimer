@@ -760,4 +760,113 @@
             openModal(`
                 <h2 style="color:#ffd700;">➕ Adicionar Novo Boss</h2>
                 <label style="display:block; margin:10px 0 5px; font-weight:bold; color:#ccd;">👤 Nome do Boss:</label>
-                <input type="text" id="addBossNome" placeholder="Ex: Lich King" style="width:100%; padding:10px; border:1px solid #2a3a5e;
+                <input type="text" id="addBossNome" placeholder="Ex: Lich King" style="width:100%; padding:10px; border:1px solid #2a3a5e; border-radius:5px; background:#0a1a2a; color:white; font-size:14px;">
+                <label style="display:block; margin:10px 0 5px; font-weight:bold; color:#ccd;">⏱️ Tempo de Respawn (minutos):</label>
+                <input type="number" id="addBossTempo" placeholder="5" min="1" style="width:100%; padding:10px; border:1px solid #2a3a5e; border-radius:5px; background:#0a1a2a; color:white; font-size:14px;">
+                <label style="display:block; margin:10px 0 5px; font-weight:bold; color:#ccd;">💀 Kills iniciais:</label>
+                <input type="number" id="addBossKills" placeholder="0" min="0" value="0" style="width:100%; padding:10px; border:1px solid #2a3a5e; border-radius:5px; background:#0a1a2a; color:white; font-size:14px;">
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="btn-modal-cancel" onclick="closeModal()" style="flex:1; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; background:#8b0000; color:white;">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveNewBoss()" style="flex:1; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; background:#006400; color:white;">✅ Adicionar Boss</button>
+                </div>
+            `);
+            
+            setTimeout(() => document.getElementById('addBossNome')?.focus(), 100);
+        }
+        
+        async function saveNewBoss() {
+            const nome = document.getElementById('addBossNome').value.trim();
+            const tempo = parseInt(document.getElementById('addBossTempo').value);
+            const kills = parseInt(document.getElementById('addBossKills').value) || 0;
+            
+            if (!nome) {
+                alert('Digite um nome para o boss!');
+                return;
+            }
+            if (isNaN(tempo) || tempo <= 0) {
+                alert('Digite um tempo válido!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/boss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, tempo, kills })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    closeModal();
+                    fetchStatus();
+                    showWindowsNotification('✅ Boss Adicionado', `${nome} adicionado com sucesso!`);
+                } else {
+                    alert(data.error || 'Erro ao adicionar boss');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar boss:', error);
+            }
+        }
+        
+        // ===================== LIMPAR HISTÓRICO =====================
+        
+        async function clearHistory() {
+            if (!confirm('🗑️ Tem certeza que deseja limpar todo o histórico de kills?')) return;
+            
+            try {
+                const response = await fetch(API_URL + '/clear-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    showWindowsNotification('🗑️ Histórico Limpo', 'Histórico de kills foi limpo!');
+                }
+            } catch (error) {
+                console.error('Erro ao limpar histórico:', error);
+            }
+        }
+        
+        // ===================== MODAL =====================
+        
+        function openModal(html) {
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modalOverlay').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+        
+        // Fechar modal clicando fora
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        // ===================== INICIALIZAÇÃO =====================
+        
+        // Solicitar permissão para notificações
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('🔔 Notificações permitidas!');
+                }
+            });
+        }
+        
+        // Atualizar a cada 2 segundos
+        fetchStatus();
+        refreshInterval = setInterval(fetchStatus, 2000);
+        
+        // Atualizar ao focar a página
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                fetchStatus();
+            }
+        });
+        
+        console.log('⚔️ Boss Timer Manager iniciado!');
+        console.log('🔔 Notificações ativadas para quando os bosses respawnarem');
+    </script>
+</body>
+</html>
