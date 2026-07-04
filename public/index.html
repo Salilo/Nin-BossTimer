@@ -1,669 +1,1109 @@
-<script>
-    // ===================== CONFIGURAÇÕES =====================
-    const API_URL = window.location.origin + '/api';
-    let refreshInterval = null;
-    let lastBossStates = {};
-    let notificationPermission = false;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ Boss Timer Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            color: #8899bb;
+            font-size: 14px;
+        }
+        
+        .online-status {
+            display: inline-block;
+            background: #00ff00;
+            color: #000;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .controls button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 13px;
+            color: white;
+        }
+        
+        .btn-add {
+            background: #006400;
+        }
+        .btn-add:hover { background: #008000; }
+        
+        .btn-clear-history {
+            background: #8b0000;
+        }
+        .btn-clear-history:hover { background: #cc0000; }
+        
+        .btn-notification {
+            background: #4a6fa5;
+        }
+        .btn-notification:hover { background: #5a7fb5; }
+        
+        .boss-grid {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .boss-grid h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+        
+        .boss-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            background: #1a2a4a;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #2a3a5e;
+            transition: all 0.3s;
+        }
+        
+        .boss-item:hover {
+            background: #1f2f5a;
+            border-color: #4a6a8e;
+        }
+        
+        .boss-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #ffd700;
+        }
+        
+        .boss-avatar-placeholder {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2a3a5e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            border: 2px solid #ffd700;
+        }
+        
+        .boss-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+        }
+        
+        .boss-name {
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .boss-status {
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .boss-status.alive {
+            background: #006400;
+            color: #00ff00;
+        }
+        
+        .boss-status.dead {
+            background: #640000;
+            color: #ff4444;
+        }
+        
+        .boss-timer {
+            font-family: 'Consolas', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            min-width: 60px;
+        }
+        
+        .boss-timer.dead {
+            color: #ff4444;
+        }
+        
+        .boss-timer.alive {
+            color: #00ff00;
+        }
+        
+        .boss-kills {
+            color: #8899bb;
+            font-size: 13px;
+        }
+        
+        .boss-actions {
+            display: flex;
+            gap: 5px;
+            margin-left: auto;
+        }
+        
+        .boss-actions button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+            color: white;
+        }
+        
+        .btn-kill {
+            background: #8b0000;
+        }
+        .btn-kill:hover { background: #cc0000; }
+        
+        .btn-respawn {
+            background: #006400;
+        }
+        .btn-respawn:hover { background: #008000; }
+        
+        .btn-edit {
+            background: #3a3a3a;
+        }
+        .btn-edit:hover { background: #4a4a4a; }
+        
+        .btn-delete {
+            background: #8b0000;
+        }
+        .btn-delete:hover { background: #cc0000; }
+        
+        .btn-image {
+            background: #6a4a8a;
+        }
+        .btn-image:hover { background: #8a5aaa; }
+        
+        .status-section {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .status-section h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+        
+        .status-text {
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            background: #0a1a2a;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .history-section {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .history-section h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .history-count {
+            color: #8899bb;
+            font-size: 13px;
+        }
+        
+        .history-list {
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            background: #0a1a2a;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 3px 0;
+            border-bottom: 1px solid #1a2a3a;
+            display: flex;
+            justify-content: space-between;
+            color: #ccd;
+        }
+        
+        .history-item .kill-boss {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .history-item .kill-number {
+            color: #ff6b6b;
+        }
+        
+        .history-item .kill-time {
+            color: #8899bb;
+        }
+        
+        .history-item .respawn-time {
+            color: #51cf66;
+        }
+        
+        .history-empty {
+            color: #667;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .last-update {
+            color: #667;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .config-path {
+            color: #667;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .modal h2 {
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+        
+        .modal label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #ccd;
+        }
+        
+        .modal input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #2a3a5e;
+            border-radius: 5px;
+            background: #0a1a2a;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .modal input:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+        
+        .modal .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal .btn-group button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            flex: 1;
+            color: white;
+        }
+        
+        .btn-modal-save {
+            background: #006400;
+        }
+        .btn-modal-save:hover { background: #008000; }
+        
+        .btn-modal-cancel {
+            background: #8b0000;
+        }
+        .btn-modal-cancel:hover { background: #cc0000; }
+        
+        .image-preview {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 8px;
+            margin-top: 5px;
+            border: 2px solid #2a3a5e;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            .controls button {
+                width: 100%;
+            }
+            .boss-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .boss-actions {
+                margin-left: 0;
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            .boss-actions button {
+                flex: 1;
+                min-width: 60px;
+            }
+            .history-item {
+                flex-direction: column;
+                font-size: 12px;
+                padding: 5px 0;
+            }
+            .boss-info {
+                min-width: unset;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚔️ Boss Timer Manager</h1>
+            <div class="subtitle">Sistema colaborativo de timers</div>
+            <span class="online-status" id="onlineStatus">🟢 Online</span>
+        </div>
+        
+        <!-- Controles -->
+        <div class="controls">
+            <button class="btn-add" onclick="openAddBoss()">➕ Adicionar Boss</button>
+            <button class="btn-notification" onclick="testNotification()">🔔 Testar Notificação</button>
+            <button class="btn-clear-history" onclick="clearHistory()">🗑️ Limpar Histórico</button>
+        </div>
+        
+        <!-- Lista de Bosses -->
+        <div class="boss-grid">
+            <h2>👹 Bosses</h2>
+            <div id="bossList"></div>
+        </div>
+        
+        <!-- Status -->
+        <div class="status-section">
+            <h2>📊 Status dos Bosses</h2>
+            <div class="status-text" id="statusText">Carregando...</div>
+        </div>
+        
+        <!-- Timers Ativos -->
+        <div class="status-section">
+            <h2>⏱️ Timers Ativos</h2>
+            <div class="status-text" id="timersText">Nenhum timer ativo</div>
+        </div>
+        
+        <!-- Histórico de Kills -->
+        <div class="history-section">
+            <div class="history-header">
+                <h2>📜 Histórico de Kills</h2>
+                <span class="history-count" id="historyCount">0 kills registradas</span>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="history-empty">Nenhuma kill registrada ainda</div>
+            </div>
+        </div>
+        
+        <div class="last-update" id="lastUpdate">Atualizado: agora</div>
+        <div class="config-path">📁 Configurações salvas no servidor</div>
+    </div>
     
-    // ===================== NOTIFICAÇÕES NATIVAS WINDOWS =====================
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent">
+            <!-- Conteúdo dinâmico -->
+        </div>
+    </div>
     
-    // Função para solicitar permissão de notificações
-    async function requestNotificationPermission() {
-        console.log('🔔 Solicitando permissão para notificações...');
+    <script>
+        // ===================== CONFIGURAÇÕES =====================
+        const API_URL = window.location.origin + '/api';
+        let refreshInterval = null;
+        let lastBossStates = {};
+        let notificationPermission = false;
         
-        if (!('Notification' in window)) {
-            console.log('❌ Notificações não suportadas neste navegador');
-            alert('Seu navegador não suporta notificações. Use Chrome, Edge ou Firefox.');
-            return false;
-        }
+        // ===================== NOTIFICAÇÕES NATIVAS WINDOWS =====================
         
-        // Verificar se já tem permissão
-        if (Notification.permission === 'granted') {
-            console.log('✅ Notificações já permitidas!');
-            notificationPermission = true;
-            return true;
-        }
-        
-        if (Notification.permission === 'denied') {
-            console.log('❌ Notificações foram bloqueadas pelo usuário');
-            alert('❌ Você bloqueou as notificações. Para ativar:\n\n' +
-                  '1. Clique no ícone de cadeado 🔒 na barra de endereço\n' +
-                  '2. Encontre "Notificações" e mude para "Permitir"\n' +
-                  '3. Recarregue a página');
-            return false;
-        }
-        
-        try {
-            // Solicitar permissão (isso mostra o popup do navegador)
-            const permission = await Notification.requestPermission();
-            notificationPermission = permission === 'granted';
-            
-            if (notificationPermission) {
-                console.log('✅ Permissão concedida para notificações!');
-                // Enviar notificação de boas-vindas
-                sendNativeNotification(
-                    '🔔 Notificações Ativadas!',
-                    'Você receberá alertas quando os bosses respawnarem.'
-                );
-                return true;
+        // Solicitar permissão para notificações
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                notificationPermission = permission === 'granted';
+                if (notificationPermission) {
+                    console.log('🔔 Notificações permitidas!');
+                } else {
+                    console.log('🔔 Notificações negadas pelo usuário');
+                }
             } else {
-                console.log('❌ Permissão negada para notificações');
-                alert('❌ Você negou as notificações. Para ativar:\n\n' +
-                      '1. Clique no ícone de cadeado 🔒 na barra de endereço\n' +
-                      '2. Encontre "Notificações" e mude para "Permitir"\n' +
-                      '3. Recarregue a página');
+                console.log('🔔 Notificações não suportadas neste navegador');
+            }
+            return notificationPermission;
+        }
+        
+        // Enviar notificação nativa do Windows
+        function sendNativeNotification(title, body, iconUrl = null) {
+            if (!('Notification' in window)) {
+                console.log('Notificações não suportadas');
                 return false;
             }
-        } catch (error) {
-            console.error('Erro ao solicitar permissão:', error);
-            return false;
-        }
-    }
-    
-    // Enviar notificação nativa do Windows
-    function sendNativeNotification(title, body, iconUrl = null) {
-        if (!('Notification' in window)) {
-            console.log('❌ Notificações não suportadas');
-            return false;
-        }
-        
-        if (Notification.permission !== 'granted') {
-            console.log('⚠️ Permissão para notificações não concedida');
-            // Tentar pedir permissão novamente
-            requestNotificationPermission();
-            return false;
-        }
-        
-        try {
-            const options = {
-                body: body,
-                requireInteraction: true, // Mantém a notificação até o usuário interagir
-                silent: false,
-                tag: 'boss-timer-' + Date.now(), // Evita notificações duplicadas
-            };
             
-            // Adicionar ícone se fornecido
-            if (iconUrl) {
-                options.icon = iconUrl;
+            if (Notification.permission !== 'granted') {
+                console.log('Permissão para notificações não concedida');
+                return false;
             }
             
-            const notification = new Notification(title, options);
-            
-            // Fechar automaticamente após 10 segundos
-            setTimeout(() => notification.close(), 10000);
-            
-            // Adicionar evento de clique
-            notification.onclick = function() {
-                window.focus();
-                this.close();
-            };
-            
-            return true;
-        } catch (error) {
-            console.error('Erro ao enviar notificação:', error);
-            return false;
-        }
-    }
-    
-    // ===================== FUNÇÕES PRINCIPAIS =====================
-    
-    async function fetchStatus() {
-        try {
-            const response = await fetch(API_URL + '/status');
-            const data = await response.json();
-            checkRespawnNotifications(data);
-            renderBosses(data);
-            renderStatus(data);
-            renderTimers(data);
-            renderHistory(data);
-            document.getElementById('lastUpdate').textContent = 'Atualizado: ' + new Date().toLocaleTimeString();
-            document.getElementById('onlineStatus').textContent = '🟢 Online';
-            document.getElementById('onlineStatus').style.background = '#00ff00';
-        } catch (error) {
-            console.error('Erro ao buscar status:', error);
-            document.getElementById('onlineStatus').textContent = '🔴 Offline';
-            document.getElementById('onlineStatus').style.background = '#ff0000';
-        }
-    }
-    
-    function checkRespawnNotifications(data) {
-        const timers = data.timers || {};
-        
-        // Verificar bosses que respawnaram (timer terminou)
-        for (const [boss, state] of Object.entries(lastBossStates)) {
-            if (state.isActive && !timers[boss]) {
-                // Boss respawnou!
-                const bossData = data.bosses[boss];
-                const imageUrl = bossData ? bossData.image : null;
-                sendNativeNotification(
-                    '🔄 Boss Vivo!',
-                    `${boss} respawnou e está pronto para ser morto!`,
-                    imageUrl || null
-                );
-                lastBossStates[boss] = { isActive: false };
+            try {
+                const options = {
+                    body: body,
+                    requireInteraction: true, // Mantém a notificação até o usuário interagir
+                    silent: false,
+                };
+                
+                // Adicionar ícone se fornecido
+                if (iconUrl) {
+                    options.icon = iconUrl;
+                }
+                
+                const notification = new Notification(title, options);
+                
+                // Fechar automaticamente após 10 segundos
+                setTimeout(() => notification.close(), 10000);
+                
+                return true;
+            } catch (error) {
+                console.error('Erro ao enviar notificação:', error);
+                return false;
             }
         }
         
-        // Atualizar estados
-        for (const [boss, timer] of Object.entries(timers)) {
-            lastBossStates[boss] = { isActive: timer.isActive };
-        }
+        // ===================== FUNÇÕES PRINCIPAIS =====================
         
-        // Remover bosses que não existem mais
-        for (const boss of Object.keys(lastBossStates)) {
-            if (!data.bosses[boss]) {
-                delete lastBossStates[boss];
+        async function fetchStatus() {
+            try {
+                const response = await fetch(API_URL + '/status');
+                const data = await response.json();
+                checkRespawnNotifications(data);
+                renderBosses(data);
+                renderStatus(data);
+                renderTimers(data);
+                renderHistory(data);
+                document.getElementById('lastUpdate').textContent = 'Atualizado: ' + new Date().toLocaleTimeString();
+                document.getElementById('onlineStatus').textContent = '🟢 Online';
+                document.getElementById('onlineStatus').style.background = '#00ff00';
+            } catch (error) {
+                console.error('Erro ao buscar status:', error);
+                document.getElementById('onlineStatus').textContent = '🔴 Offline';
+                document.getElementById('onlineStatus').style.background = '#ff0000';
             }
         }
-    }
-    
-    function renderBosses(data) {
-        const list = document.getElementById('bossList');
-        list.innerHTML = '';
         
-        const bossNames = Object.keys(data.bosses);
-        if (bossNames.length === 0) {
-            list.innerHTML = '<p style="color: #667; text-align: center;">Nenhum boss cadastrado</p>';
-            return;
-        }
-        
-        for (const nome of bossNames) {
-            const bossData = data.bosses[nome];
-            const respawnTime = bossData.respawn;
-            const imageUrl = bossData.image || '';
-            const kills = data.kill_counts[nome] || 0;
-            const isDead = data.timers && data.timers[nome] && data.timers[nome].isActive;
-            const timer = data.timers && data.timers[nome];
+        function checkRespawnNotifications(data) {
+            const timers = data.timers || {};
             
-            let timerText = '🟢 Vivo';
-            let timerClass = 'alive';
-            let statusClass = 'alive';
-            let statusText = '🟢 Vivo';
-            
-            if (isDead) {
-                const m = timer.minutes || 0;
-                const s = timer.seconds || 0;
-                timerText = `🔴 ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-                timerClass = 'dead';
-                statusClass = 'dead';
-                statusText = '🔴 Morto';
+            // Verificar bosses que respawnaram (timer terminou)
+            for (const [boss, state] of Object.entries(lastBossStates)) {
+                if (state.isActive && !timers[boss]) {
+                    // Boss respawnou!
+                    const bossData = data.bosses[boss];
+                    const imageUrl = bossData ? bossData.image : null;
+                    sendNativeNotification(
+                        '🔄 Boss Vivo!',
+                        `${boss} respawnou e está pronto para ser morto!`,
+                        imageUrl || null
+                    );
+                    lastBossStates[boss] = { isActive: false };
+                }
             }
             
-            const div = document.createElement('div');
-            div.className = 'boss-item';
-            
-            // Avatar
-            let avatarHtml = '';
-            if (imageUrl) {
-                avatarHtml = `<img src="${imageUrl}" class="boss-avatar" alt="${nome}" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'boss-avatar-placeholder\\'>👹</div>'">`;
-            } else {
-                avatarHtml = `<div class="boss-avatar-placeholder">👹</div>`;
+            // Atualizar estados
+            for (const [boss, timer] of Object.entries(timers)) {
+                lastBossStates[boss] = { isActive: timer.isActive };
             }
             
-            div.innerHTML = `
-                <div class="boss-info">
-                    ${avatarHtml}
-                    <span class="boss-name">${nome}</span>
-                </div>
-                <span class="boss-status ${statusClass}">${statusText}</span>
-                <span class="boss-timer ${timerClass}">${timerText}</span>
-                <span class="boss-kills">💀 ${kills}</span>
-                <span class="boss-kills">⏱️ ${respawnTime}min</span>
-                <div class="boss-actions">
-                    ${!isDead ? `<button class="btn-kill" onclick="killBoss('${nome}')">☠️ Matar</button>` : ''}
-                    ${isDead ? `<button class="btn-respawn" onclick="respawnBoss('${nome}')">✅ Vivo</button>` : ''}
-                    <button class="btn-image" onclick="editImage('${nome}')">🖼️</button>
-                    <button class="btn-edit" onclick="editKills('${nome}')">✏️</button>
-                    <button class="btn-delete" onclick="deleteBoss('${nome}')">🗑️</button>
-                </div>
-            `;
-            list.appendChild(div);
-        }
-    }
-    
-    function renderStatus(data) {
-        const text = document.getElementById('statusText');
-        let output = '';
-        for (const [nome, bossData] of Object.entries(data.bosses)) {
-            const kills = data.kill_counts[nome] || 0;
-            const isDead = data.timers && data.timers[nome] && data.timers[nome].isActive;
-            const status = isDead ? '🔴 Morto' : '🟢 Vivo';
-            output += `${nome}: ${status} | 💀 ${kills} | ⏱️ ${bossData.respawn}min\n`;
-        }
-        text.textContent = output || 'Nenhum boss cadastrado';
-    }
-    
-    function renderTimers(data) {
-        const text = document.getElementById('timersText');
-        let output = '';
-        const timers = data.timers || {};
-        const bossNames = Object.keys(timers);
-        
-        if (bossNames.length === 0) {
-            text.textContent = 'Nenhum timer ativo';
-            return;
-        }
-        
-        for (const [nome, timer] of Object.entries(timers)) {
-            if (timer.isActive) {
-                const m = timer.minutes || 0;
-                const s = timer.seconds || 0;
-                const kills = data.kill_counts[nome] || 0;
-                const respawnTime = new Date(timer.endTime);
-                output += `${nome}: ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} | 💀 ${kills} | ⏰ ${respawnTime.toLocaleTimeString()}\n`;
+            // Remover bosses que não existem mais
+            for (const boss of Object.keys(lastBossStates)) {
+                if (!data.bosses[boss]) {
+                    delete lastBossStates[boss];
+                }
             }
         }
-        text.textContent = output || 'Nenhum timer ativo';
-    }
-    
-    function renderHistory(data) {
-        const list = document.getElementById('historyList');
-        const count = document.getElementById('historyCount');
-        const history = data.kill_history || [];
         
-        count.textContent = `${history.length} kills registradas`;
-        
-        if (history.length === 0) {
-            list.innerHTML = '<div class="history-empty">Nenhuma kill registrada ainda</div>';
-            return;
-        }
-        
-        const reversed = [...history].reverse();
-        let html = '';
-        for (const item of reversed) {
-            const killTime = new Date(item.kill_time);
-            const respawnTime = new Date(item.respawn_time);
-            html += `
-                <div class="history-item">
-                    <span>
-                        <span class="kill-boss">${item.boss}</span>
-                        <span class="kill-number">#${item.kill_number}</span>
-                    </span>
-                    <span>
-                        <span class="kill-time">💀 ${killTime.toLocaleString()}</span>
-                        <span class="respawn-time"> | ⏰ ${respawnTime.toLocaleTimeString()}</span>
-                    </span>
-                </div>
-            `;
-        }
-        list.innerHTML = html;
-    }
-    
-    // ===================== AÇÕES DOS BOSSES =====================
-    
-    async function killBoss(nome) {
-        if (!confirm(`☠️ Confirmar morte do ${nome}?`)) return;
-        
-        try {
-            const response = await fetch(API_URL + '/kill', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ boss: nome })
-            });
-            const data = await response.json();
-            if (data.success) {
-                fetchStatus();
-                sendNativeNotification(
-                    '☠️ Boss Morto!',
-                    `${nome} foi morto! Respawn em ${data.respawn_minutes}min`
-                );
-            }
-        } catch (error) {
-            console.error('Erro ao matar boss:', error);
-            alert('Erro ao matar boss! Verifique o console.');
-        }
-    }
-    
-    async function respawnBoss(nome) {
-        try {
-            const response = await fetch(API_URL + '/respawn', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ boss: nome })
-            });
-            const data = await response.json();
-            if (data.success) {
-                fetchStatus();
-                sendNativeNotification(
-                    '✅ Boss Vivo!',
-                    `${nome} está vivo novamente!`
-                );
-            }
-        } catch (error) {
-            console.error('Erro ao respawnar boss:', error);
-            alert('Erro ao respawnar boss! Verifique o console.');
-        }
-    }
-    
-    async function deleteBoss(nome) {
-        if (!confirm(`🗑️ Remover ${nome} permanentemente?`)) return;
-        
-        try {
-            const response = await fetch(API_URL + '/boss', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome })
-            });
-            const data = await response.json();
-            if (data.success) {
-                fetchStatus();
-                sendNativeNotification(
-                    '🗑️ Boss Removido',
-                    `${nome} foi removido!`
-                );
-            }
-        } catch (error) {
-            console.error('Erro ao remover boss:', error);
-            alert('Erro ao remover boss! Verifique o console.');
-        }
-    }
-    
-    // ===================== EDIÇÃO DE IMAGEM =====================
-    
-    function editImage(nome) {
-        const currentImage = getCurrentImage(nome);
-        openModal(`
-            <h2>🖼️ Editar Imagem - ${nome}</h2>
-            <label>URL da imagem do boss:</label>
-            <input type="text" id="editImageInput" placeholder="https://exemplo.com/boss.png" value="${currentImage}">
-            ${currentImage ? `<img src="${currentImage}" class="image-preview" onerror="this.style.display='none'">` : ''}
-            <div class="btn-group">
-                <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
-                <button class="btn-modal-save" onclick="saveImage('${nome}')">💾 Salvar</button>
-            </div>
-        `);
-        
-        setTimeout(() => {
-            const input = document.getElementById('editImageInput');
-            if (input) {
-                input.addEventListener('input', function() {
-                    const preview = document.querySelector('.image-preview');
-                    if (preview) {
-                        preview.src = this.value;
-                        preview.style.display = this.value ? 'block' : 'none';
-                    }
-                });
-            }
-        }, 100);
-    }
-    
-    function getCurrentImage(nome) {
-        const bossItems = document.querySelectorAll('.boss-item');
-        for (const item of bossItems) {
-            const nameElement = item.querySelector('.boss-name');
-            if (nameElement && nameElement.textContent === nome) {
-                const img = item.querySelector('.boss-avatar');
-                if (img) return img.src;
-            }
-        }
-        return '';
-    }
-    
-    async function saveImage(nome) {
-        const input = document.getElementById('editImageInput');
-        if (!input) {
-            alert('Erro: campo não encontrado!');
-            return;
-        }
-        
-        const image = input.value.trim();
-        
-        try {
-            const response = await fetch(API_URL + '/edit-boss', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome, image })
-            });
-            const data = await response.json();
-            if (data.success) {
-                closeModal();
-                fetchStatus();
-                sendNativeNotification(
-                    '🖼️ Imagem Atualizada',
-                    `Imagem de ${nome} foi atualizada!`
-                );
-            }
-        } catch (error) {
-            console.error('Erro ao atualizar imagem:', error);
-            alert('Erro ao atualizar imagem! Verifique o console.');
-        }
-    }
-    
-    // ===================== EDIÇÃO DE KILLS =====================
-    
-    function editKills(nome) {
-        const currentKills = getKillsFromStatus(nome);
-        openModal(`
-            <h2>✏️ Editar Kills - ${nome}</h2>
-            <label>Número de kills:</label>
-            <input type="number" id="editKillsInput" min="0" value="${currentKills}">
-            <div class="btn-group">
-                <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
-                <button class="btn-modal-save" onclick="saveKills('${nome}')">💾 Salvar</button>
-            </div>
-        `);
-    }
-    
-    function getKillsFromStatus(nome) {
-        const statusText = document.getElementById('statusText').textContent;
-        const match = statusText.match(new RegExp(`${nome}:[^|]*\\| 💀 (\\d+)`));
-        return match ? parseInt(match[1]) : 0;
-    }
-    
-    async function saveKills(nome) {
-        const input = document.getElementById('editKillsInput');
-        if (!input) {
-            alert('Erro: campo não encontrado!');
-            return;
-        }
-        const kills = parseInt(input.value);
-        if (isNaN(kills) || kills < 0) {
-            alert('Digite um número válido!');
-            return;
-        }
-        
-        try {
-            const response = await fetch(API_URL + '/edit-kills', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ boss: nome, kills })
-            });
-            const data = await response.json();
-            if (data.success) {
-                closeModal();
-                fetchStatus();
-                sendNativeNotification(
-                    '✏️ Kills Atualizadas',
-                    `${nome}: ${kills} kills`
-                );
-            }
-        } catch (error) {
-            console.error('Erro ao editar kills:', error);
-            alert('Erro ao editar kills! Verifique o console.');
-        }
-    }
-    
-    // ===================== ADICIONAR BOSS =====================
-    
-    function openAddBoss() {
-        console.log('📝 Abrindo modal de adicionar boss...');
-        openModal(`
-            <h2>➕ Adicionar Novo Boss</h2>
-            <label>👤 Nome do Boss:</label>
-            <input type="text" id="addBossNome" placeholder="Ex: Lich King">
-            <label>⏱️ Tempo de Respawn (minutos):</label>
-            <input type="number" id="addBossTempo" placeholder="5" min="1">
-            <label>💀 Kills iniciais:</label>
-            <input type="number" id="addBossKills" placeholder="0" min="0" value="0">
-            <label>🖼️ URL da imagem (opcional):</label>
-            <input type="text" id="addBossImage" placeholder="https://exemplo.com/boss.png">
-            <div class="btn-group">
-                <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
-                <button class="btn-modal-save" onclick="saveNewBoss()">✅ Adicionar Boss</button>
-            </div>
-        `);
-        
-        setTimeout(() => {
-            const input = document.getElementById('addBossNome');
-            if (input) input.focus();
-        }, 100);
-    }
-    
-    async function saveNewBoss() {
-        console.log('💾 Salvando novo boss...');
-        const nomeInput = document.getElementById('addBossNome');
-        const tempoInput = document.getElementById('addBossTempo');
-        const killsInput = document.getElementById('addBossKills');
-        const imageInput = document.getElementById('addBossImage');
-        
-        if (!nomeInput || !tempoInput || !killsInput) {
-            alert('Erro: campos do formulário não encontrados!');
-            return;
-        }
-        
-        const nome = nomeInput.value.trim();
-        const tempo = parseInt(tempoInput.value);
-        const kills = parseInt(killsInput.value) || 0;
-        const image = imageInput ? imageInput.value.trim() : '';
-        
-        if (!nome) {
-            alert('Digite um nome para o boss!');
-            nomeInput.focus();
-            return;
-        }
-        if (isNaN(tempo) || tempo <= 0) {
-            alert('Digite um tempo válido!');
-            tempoInput.focus();
-            return;
-        }
-        
-        try {
-            const response = await fetch(API_URL + '/boss', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome, tempo, kills, image })
-            });
-            const data = await response.json();
-            if (data.success) {
-                closeModal();
-                fetchStatus();
-                sendNativeNotification(
-                    '✅ Boss Adicionado',
-                    `${nome} adicionado com sucesso!`
-                );
-            } else {
-                alert(data.error || 'Erro ao adicionar boss');
-            }
-        } catch (error) {
-            console.error('Erro ao adicionar boss:', error);
-            alert('Erro ao adicionar boss! Verifique o console.');
-        }
-    }
-    
-    // ===================== LIMPAR HISTÓRICO =====================
-    
-    async function clearHistory() {
-        if (!confirm('🗑️ Tem certeza que deseja limpar todo o histórico de kills?')) return;
-        
-        try {
-            const response = await fetch(API_URL + '/clear-history', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await response.json();
-            if (data.success) {
-                fetchStatus();
-                sendNativeNotification(
-                    '🗑️ Histórico Limpo',
-                    'Histórico de kills foi limpo!'
-                );
-            }
-        } catch (error) {
-            console.error('Erro ao limpar histórico:', error);
-            alert('Erro ao limpar histórico! Verifique o console.');
-        }
-    }
-    
-    // ===================== TESTE DE NOTIFICAÇÃO =====================
-    
-    async function testNotification() {
-        console.log('🔔 Testando notificação nativa...');
-        
-        // Se não tiver permissão, solicitar
-        if (Notification.permission !== 'granted') {
-            const granted = await requestNotificationPermission();
-            if (!granted) {
-                alert('❌ Permissão negada. Siga as instruções para ativar as notificações.');
+        function renderBosses(data) {
+            const list = document.getElementById('bossList');
+            list.innerHTML = '';
+            
+            const bossNames = Object.keys(data.bosses);
+            if (bossNames.length === 0) {
+                list.innerHTML = '<p style="color: #667; text-align: center;">Nenhum boss cadastrado</p>';
                 return;
             }
-        }
-        
-        // Enviar notificação de teste
-        const success = sendNativeNotification(
-            '🔔 Teste de Notificação',
-            'Isso é uma notificação nativa do Windows! ✅',
-            null
-        );
-        
-        if (success) {
-            alert('✅ Notificação enviada com sucesso! Verifique o centro de notificações do Windows.');
-        } else {
-            alert('❌ Falha ao enviar notificação. Verifique as configurações do navegador.');
-        }
-    }
-    
-    // ===================== MODAL =====================
-    
-    function openModal(html) {
-        const overlay = document.getElementById('modalOverlay');
-        const content = document.getElementById('modalContent');
-        content.innerHTML = html;
-        overlay.classList.add('active');
-        overlay.style.display = 'flex';
-    }
-    
-    function closeModal() {
-        const overlay = document.getElementById('modalOverlay');
-        overlay.classList.remove('active');
-        overlay.style.display = 'none';
-    }
-    
-    // Fechar modal clicando fora
-    document.getElementById('modalOverlay').addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-    });
-    
-    // ===================== INICIALIZAÇÃO =====================
-    
-    // Verificar permissão ao carregar a página
-    async function init() {
-        console.log('⚔️ Boss Timer Manager iniciado!');
-        
-        // Verificar permissão de notificações
-        if ('Notification' in window) {
-            if (Notification.permission === 'granted') {
-                console.log('✅ Notificações já permitidas!');
-                notificationPermission = true;
-            } else if (Notification.permission === 'denied') {
-                console.log('❌ Notificações bloqueadas pelo usuário');
-                // Mostrar instruções
-                setTimeout(() => {
-                    alert('🔔 Para receber notificações:\n\n' +
-                          '1. Clique no ícone de cadeado 🔒 na barra de endereço\n' +
-                          '2. Encontre "Notificações" e mude para "Permitir"\n' +
-                          '3. Recarregue a página e clique em "Testar Notificação"');
-                }, 1000);
-            } else {
-                // 'default' - ainda não pediu permissão
-                console.log('ℹ️ Aguardando usuário para pedir permissão');
-                // Vai pedir quando clicar em "Testar Notificação"
+            
+            for (const nome of bossNames) {
+                const bossData = data.bosses[nome];
+                const respawnTime = bossData.respawn;
+                const imageUrl = bossData.image || '';
+                const kills = data.kill_counts[nome] || 0;
+                const isDead = data.timers && data.timers[nome] && data.timers[nome].isActive;
+                const timer = data.timers && data.timers[nome];
+                
+                let timerText = '🟢 Vivo';
+                let timerClass = 'alive';
+                let statusClass = 'alive';
+                let statusText = '🟢 Vivo';
+                
+                if (isDead) {
+                    const m = timer.minutes || 0;
+                    const s = timer.seconds || 0;
+                    timerText = `🔴 ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    timerClass = 'dead';
+                    statusClass = 'dead';
+                    statusText = '🔴 Morto';
+                }
+                
+                const div = document.createElement('div');
+                div.className = 'boss-item';
+                
+                // Avatar
+                let avatarHtml = '';
+                if (imageUrl) {
+                    avatarHtml = `<img src="${imageUrl}" class="boss-avatar" alt="${nome}" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'boss-avatar-placeholder\\'>👹</div>'">`;
+                } else {
+                    avatarHtml = `<div class="boss-avatar-placeholder">👹</div>`;
+                }
+                
+                div.innerHTML = `
+                    <div class="boss-info">
+                        ${avatarHtml}
+                        <span class="boss-name">${nome}</span>
+                    </div>
+                    <span class="boss-status ${statusClass}">${statusText}</span>
+                    <span class="boss-timer ${timerClass}">${timerText}</span>
+                    <span class="boss-kills">💀 ${kills}</span>
+                    <span class="boss-kills">⏱️ ${respawnTime}min</span>
+                    <div class="boss-actions">
+                        ${!isDead ? `<button class="btn-kill" onclick="killBoss('${nome}')">☠️ Matar</button>` : ''}
+                        ${isDead ? `<button class="btn-respawn" onclick="respawnBoss('${nome}')">✅ Vivo</button>` : ''}
+                        <button class="btn-image" onclick="editImage('${nome}')">🖼️</button>
+                        <button class="btn-edit" onclick="editKills('${nome}')">✏️</button>
+                        <button class="btn-delete" onclick="deleteBoss('${nome}')">🗑️</button>
+                    </div>
+                `;
+                list.appendChild(div);
             }
         }
         
-        // Atualizar dados
-        await fetchStatus();
+        function renderStatus(data) {
+            const text = document.getElementById('statusText');
+            let output = '';
+            for (const [nome, bossData] of Object.entries(data.bosses)) {
+                const kills = data.kill_counts[nome] || 0;
+                const isDead = data.timers && data.timers[nome] && data.timers[nome].isActive;
+                const status = isDead ? '🔴 Morto' : '🟢 Vivo';
+                output += `${nome}: ${status} | 💀 ${kills} | ⏱️ ${bossData.respawn}min\n`;
+            }
+            text.textContent = output || 'Nenhum boss cadastrado';
+        }
+        
+        function renderTimers(data) {
+            const text = document.getElementById('timersText');
+            let output = '';
+            const timers = data.timers || {};
+            const bossNames = Object.keys(timers);
+            
+            if (bossNames.length === 0) {
+                text.textContent = 'Nenhum timer ativo';
+                return;
+            }
+            
+            for (const [nome, timer] of Object.entries(timers)) {
+                if (timer.isActive) {
+                    const m = timer.minutes || 0;
+                    const s = timer.seconds || 0;
+                    const kills = data.kill_counts[nome] || 0;
+                    const respawnTime = new Date(timer.endTime);
+                    output += `${nome}: ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} | 💀 ${kills} | ⏰ ${respawnTime.toLocaleTimeString()}\n`;
+                }
+            }
+            text.textContent = output || 'Nenhum timer ativo';
+        }
+        
+        function renderHistory(data) {
+            const list = document.getElementById('historyList');
+            const count = document.getElementById('historyCount');
+            const history = data.kill_history || [];
+            
+            count.textContent = `${history.length} kills registradas`;
+            
+            if (history.length === 0) {
+                list.innerHTML = '<div class="history-empty">Nenhuma kill registrada ainda</div>';
+                return;
+            }
+            
+            const reversed = [...history].reverse();
+            let html = '';
+            for (const item of reversed) {
+                const killTime = new Date(item.kill_time);
+                const respawnTime = new Date(item.respawn_time);
+                html += `
+                    <div class="history-item">
+                        <span>
+                            <span class="kill-boss">${item.boss}</span>
+                            <span class="kill-number">#${item.kill_number}</span>
+                        </span>
+                        <span>
+                            <span class="kill-time">💀 ${killTime.toLocaleString()}</span>
+                            <span class="respawn-time"> | ⏰ ${respawnTime.toLocaleTimeString()}</span>
+                        </span>
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+        }
+        
+        // ===================== AÇÕES DOS BOSSES =====================
+        
+        async function killBoss(nome) {
+            if (!confirm(`☠️ Confirmar morte do ${nome}?`)) return;
+            
+            try {
+                const response = await fetch(API_URL + '/kill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ boss: nome })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    sendNativeNotification(
+                        '☠️ Boss Morto!',
+                        `${nome} foi morto! Respawn em ${data.respawn_minutes}min`
+                    );
+                }
+            } catch (error) {
+                console.error('Erro ao matar boss:', error);
+                alert('Erro ao matar boss! Verifique o console.');
+            }
+        }
+        
+        async function respawnBoss(nome) {
+            try {
+                const response = await fetch(API_URL + '/respawn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ boss: nome })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    sendNativeNotification(
+                        '✅ Boss Vivo!',
+                        `${nome} está vivo novamente!`
+                    );
+                }
+            } catch (error) {
+                console.error('Erro ao respawnar boss:', error);
+                alert('Erro ao respawnar boss! Verifique o console.');
+            }
+        }
+        
+        async function deleteBoss(nome) {
+            if (!confirm(`🗑️ Remover ${nome} permanentemente?`)) return;
+            
+            try {
+                const response = await fetch(API_URL + '/boss', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    sendNativeNotification(
+                        '🗑️ Boss Removido',
+                        `${nome} foi removido!`
+                    );
+                }
+            } catch (error) {
+                console.error('Erro ao remover boss:', error);
+                alert('Erro ao remover boss! Verifique o console.');
+            }
+        }
+        
+        // ===================== EDIÇÃO DE IMAGEM =====================
+        
+        function editImage(nome) {
+            const currentImage = getCurrentImage(nome);
+            openModal(`
+                <h2>🖼️ Editar Imagem - ${nome}</h2>
+                <label>URL da imagem do boss:</label>
+                <input type="text" id="editImageInput" placeholder="https://exemplo.com/boss.png" value="${currentImage}">
+                ${currentImage ? `<img src="${currentImage}" class="image-preview" onerror="this.style.display='none'">` : ''}
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveImage('${nome}')">💾 Salvar</button>
+                </div>
+            `);
+            
+            // Pré-visualização ao digitar
+            setTimeout(() => {
+                const input = document.getElementById('editImageInput');
+                if (input) {
+                    input.addEventListener('input', function() {
+                        const preview = document.querySelector('.image-preview');
+                        if (preview) {
+                            preview.src = this.value;
+                            preview.style.display = this.value ? 'block' : 'none';
+                        }
+                    });
+                }
+            }, 100);
+        }
+        
+        function getCurrentImage(nome) {
+            const bossItems = document.querySelectorAll('.boss-item');
+            for (const item of bossItems) {
+                const nameElement = item.querySelector('.boss-name');
+                if (nameElement && nameElement.textContent === nome) {
+                    const img = item.querySelector('.boss-avatar');
+                    if (img) return img.src;
+                }
+            }
+            return '';
+        }
+        
+        async function saveImage(nome) {
+            const input = document.getElementById('editImageInput');
+            if (!input) {
+                alert('Erro: campo não encontrado!');
+                return;
+            }
+            
+            const image = input.value.trim();
+            
+            try {
+                const response = await fetch(API_URL + '/edit-boss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, image })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    closeModal();
+                    fetchStatus();
+                    sendNativeNotification(
+                        '🖼️ Imagem Atualizada',
+                        `Imagem de ${nome} foi atualizada!`
+                    );
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar imagem:', error);
+                alert('Erro ao atualizar imagem! Verifique o console.');
+            }
+        }
+        
+        // ===================== EDIÇÃO DE KILLS =====================
+        
+        function editKills(nome) {
+            const currentKills = getKillsFromStatus(nome);
+            openModal(`
+                <h2>✏️ Editar Kills - ${nome}</h2>
+                <label>Número de kills:</label>
+                <input type="number" id="editKillsInput" min="0" value="${currentKills}">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveKills('${nome}')">💾 Salvar</button>
+                </div>
+            `);
+        }
+        
+        function getKillsFromStatus(nome) {
+            const statusText = document.getElementById('statusText').textContent;
+            const match = statusText.match(new RegExp(`${nome}:[^|]*\\| 💀 (\\d+)`));
+            return match ? parseInt(match[1]) : 0;
+        }
+        
+        async function saveKills(nome) {
+            const input = document.getElementById('editKillsInput');
+            if (!input) {
+                alert('Erro: campo não encontrado!');
+                return;
+            }
+            const kills = parseInt(input.value);
+            if (isNaN(kills) || kills < 0) {
+                alert('Digite um número válido!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/edit-kills', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ boss: nome, kills })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    closeModal();
+                    fetchStatus();
+                    sendNativeNotification(
+                        '✏️ Kills Atualizadas',
+                        `${nome}: ${kills} kills`
+                    );
+                }
+            } catch (error) {
+                console.error('Erro ao editar kills:', error);
+                alert('Erro ao editar kills! Verifique o console.');
+            }
+        }
+        
+        // ===================== ADICIONAR BOSS =====================
+        
+        function openAddBoss() {
+            console.log('📝 Abrindo modal de adicionar boss...');
+            openModal(`
+                <h2>➕ Adicionar Novo Boss</h2>
+                <label>👤 Nome do Boss:</label>
+                <input type="text" id="addBossNome" placeholder="Ex: Lich King">
+                <label>⏱️ Tempo de Respawn (minutos):</label>
+                <input type="number" id="addBossTempo" placeholder="5" min="1">
+                <label>💀 Kills iniciais:</label>
+                <input type="number" id="addBossKills" placeholder="0" min="0" value="0">
+                <label>🖼️ URL da imagem (opcional):</label>
+                <input type="text" id="addBossImage" placeholder="https://exemplo.com/boss.png">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveNewBoss()">✅ Adicionar Boss</button>
+                </div>
+            `);
+            
+            setTimeout(() => {
+                const input = document.getElementById('addBossNome');
+                if (input) input.focus();
+            }, 100);
+        }
+        
+        async function saveNewBoss() {
+            console.log('💾 Salvando novo boss...');
+            const nomeInput = document.getElementById('addBossNome');
+            const tempoInput = document.getElementById('addBossTempo');
+            const killsInput = document.getElementById('addBossKills');
+            const imageInput = document.getElementById('addBossImage');
+            
+            if (!nomeInput || !tempoInput || !killsInput) {
+                alert('Erro: campos do formulário não encontrados!');
+                return;
+            }
+            
+            const nome = nomeInput.value.trim();
+            const tempo = parseInt(tempoInput.value);
+            const kills = parseInt(killsInput.value) || 0;
+            const image = imageInput ? imageInput.value.trim() : '';
+            
+            if (!nome) {
+                alert('Digite um nome para o boss!');
+                nomeInput.focus();
+                return;
+            }
+            if (isNaN(tempo) || tempo <= 0) {
+                alert('Digite um tempo válido!');
+                tempoInput.focus();
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/boss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, tempo, kills, image })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    closeModal();
+                    fetchStatus();
+                    sendNativeNotification(
+                        '✅ Boss Adicionado',
+                        `${nome} adicionado com sucesso!`
+                    );
+                } else {
+                    alert(data.error || 'Erro ao adicionar boss');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar boss:', error);
+                alert('Erro ao adicionar boss! Verifique o console.');
+            }
+        }
+        
+        // ===================== LIMPAR HISTÓRICO =====================
+        
+        async function clearHistory() {
+            if (!confirm('🗑️ Tem certeza que deseja limpar todo o histórico de kills?')) return;
+            
+            try {
+                const response = await fetch(API_URL + '/clear-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    sendNativeNotification(
+                        '🗑️ Histórico Limpo',
+                        'Histórico de kills foi limpo!'
+                    );
+                }
+            } catch (error) {
+                console.error('Erro ao limpar histórico:', error);
+                alert('Erro ao limpar histórico! Verifique o console.');
+            }
+        }
+        
+        // ===================== TESTE DE NOTIFICAÇÃO =====================
+        
+        function testNotification() {
+            console.log('🔔 Testando notificação nativa...');
+            const success = sendNativeNotification(
+                '🔔 Teste de Notificação',
+                'Isso é uma notificação nativa do Windows!',
+                null
+            );
+            
+            if (!success) {
+                alert('❌ Não foi possível enviar a notificação. Verifique se você permitiu as notificações no navegador.');
+            }
+        }
+        
+        // ===================== MODAL =====================
+        
+        function openModal(html) {
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            content.innerHTML = html;
+            overlay.classList.add('active');
+            overlay.style.display = 'flex';
+        }
+        
+        function closeModal() {
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('active');
+            overlay.style.display = 'none';
+        }
+        
+        // Fechar modal clicando fora
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        // ===================== INICIALIZAÇÃO =====================
+        
+        // Solicitar permissão para notificações
+        requestNotificationPermission();
         
         // Atualizar a cada 2 segundos
+        fetchStatus();
         refreshInterval = setInterval(fetchStatus, 2000);
         
         // Atualizar ao focar a página
@@ -673,11 +1113,10 @@
             }
         });
         
+        console.log('⚔️ Boss Timer Manager iniciado!');
+        console.log('🔔 Notificações nativas ativadas para quando os bosses respawnarem');
         console.log('📝 Para adicionar boss, clique em "Adicionar Boss"');
         console.log('🖼️ Para adicionar imagem, use o botão 🖼️ em cada boss');
-        console.log('🔔 Clique em "Testar Notificação" para ativar as notificações');
-    }
-    
-    // Iniciar
-    init();
-</script>
+    </script>
+</body>
+</html>
