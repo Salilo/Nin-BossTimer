@@ -26,7 +26,7 @@ let data = {
     'Ragnaros': 0
   },
   respawn_times: {},
-  participantes: {},
+  kill_history: [],
   timers: {}
 };
 
@@ -36,10 +36,10 @@ function loadData() {
     if (fs.existsSync(DATA_FILE)) {
       const saved = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
       data = { ...data, ...saved };
-      console.log('Dados carregados com sucesso!');
+      console.log('📂 Dados carregados com sucesso!');
     }
   } catch (error) {
-    console.error('Erro ao carregar dados:', error);
+    console.error('❌ Erro ao carregar dados:', error);
   }
 }
 
@@ -47,9 +47,9 @@ function loadData() {
 function saveData() {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
-    console.log('Dados salvos com sucesso!');
+    console.log('💾 Dados salvos com sucesso!');
   } catch (error) {
-    console.error('Erro ao salvar dados:', error);
+    console.error('❌ Erro ao salvar dados:', error);
   }
 }
 
@@ -65,18 +65,14 @@ app.get('/api/status', (req, res) => {
     bosses: data.bosses,
     kill_counts: data.kill_counts,
     respawn_times: data.respawn_times,
-    participantes: data.participantes,
+    kill_history: data.kill_history.slice(-50),
     timers: activeTimers,
     timestamp: Date.now()
   });
 });
 
-app.get('/api/timers', (req, res) => {
-  res.json(activeTimers);
-});
-
 app.post('/api/kill', (req, res) => {
-  const { boss, participantes } = req.body;
+  const { boss } = req.body;
   
   if (!boss || !data.bosses[boss]) {
     return res.status(400).json({ error: 'Boss não encontrado' });
@@ -85,14 +81,23 @@ app.post('/api/kill', (req, res) => {
   // Atualizar kills
   data.kill_counts[boss] = (data.kill_counts[boss] || 0) + 1;
   
-  // Atualizar participantes
-  if (participantes && participantes.length > 0) {
-    data.participantes[boss] = participantes;
-  }
-
   const respawnMinutes = data.bosses[boss];
   const killTime = new Date();
   const respawnTime = new Date(killTime.getTime() + respawnMinutes * 60 * 1000);
+  
+  // Adicionar ao histórico
+  data.kill_history.push({
+    boss: boss,
+    kill_number: data.kill_counts[boss],
+    kill_time: killTime.toISOString(),
+    respawn_time: respawnTime.toISOString(),
+    respawn_minutes: respawnMinutes
+  });
+  
+  // Manter apenas os últimos 100 registros
+  if (data.kill_history.length > 100) {
+    data.kill_history = data.kill_history.slice(-100);
+  }
   
   // Salvar tempo de respawn
   data.respawn_times[boss] = respawnTime.toISOString();
@@ -136,7 +141,7 @@ app.post('/api/respawn', (req, res) => {
 });
 
 app.post('/api/boss', (req, res) => {
-  const { nome, tempo, kills, participantes } = req.body;
+  const { nome, tempo, kills } = req.body;
   
   if (!nome || !tempo) {
     return res.status(400).json({ error: 'Nome e tempo são obrigatórios' });
@@ -148,10 +153,6 @@ app.post('/api/boss', (req, res) => {
   
   data.bosses[nome] = parseInt(tempo);
   data.kill_counts[nome] = parseInt(kills) || 0;
-  
-  if (participantes && participantes.length > 0) {
-    data.participantes[nome] = participantes;
-  }
   
   saveData();
   
@@ -168,8 +169,10 @@ app.delete('/api/boss', (req, res) => {
   delete data.bosses[nome];
   delete data.kill_counts[nome];
   delete data.respawn_times[nome];
-  delete data.participantes[nome];
   delete activeTimers[nome];
+  
+  // Remover do histórico também
+  data.kill_history = data.kill_history.filter(h => h.boss !== nome);
   
   saveData();
   
@@ -189,21 +192,9 @@ app.post('/api/edit-kills', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/edit-participantes', (req, res) => {
-  const { boss, participantes } = req.body;
-  
-  if (!boss || !data.bosses[boss]) {
-    return res.status(400).json({ error: 'Boss não encontrado' });
-  }
-  
-  if (participantes && participantes.length > 0) {
-    data.participantes[boss] = participantes;
-  } else {
-    delete data.participantes[boss];
-  }
-  
+app.post('/api/clear-history', (req, res) => {
+  data.kill_history = [];
   saveData();
-  
   res.json({ success: true });
 });
 
@@ -235,10 +226,14 @@ function startTimer(boss, minutes) {
     if (remainingSeconds <= 0) {
       clearInterval(activeTimers[boss].interval);
       delete activeTimers[boss];
-      // Notificar que o boss respawnou
+      
+      // Boss respawnou - salvar e notificar
       const now = new Date();
       data.respawn_times[boss] = now.toISOString();
       saveData();
+      
+      // Enviar notificação via API para o frontend
+      console.log(`🔄 ${boss} respawnou!`);
     }
   };
   
@@ -277,5 +272,6 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🌐 Acesse: http://localhost:${PORT}`);
 });
