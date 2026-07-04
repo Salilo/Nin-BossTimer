@@ -16,9 +16,9 @@ const DATA_FILE = path.join(__dirname, 'boss_data.json');
 // Dados padrão
 let data = {
   bosses: {
-    'Lich King': 5,
-    'Deathwing': 10,
-    'Ragnaros': 15
+    'Lich King': { respawn: 5, image: '' },
+    'Deathwing': { respawn: 10, image: '' },
+    'Ragnaros': { respawn: 15, image: '' }
   },
   kill_counts: {
     'Lich King': 0,
@@ -81,7 +81,7 @@ app.post('/api/kill', (req, res) => {
   // Atualizar kills
   data.kill_counts[boss] = (data.kill_counts[boss] || 0) + 1;
   
-  const respawnMinutes = data.bosses[boss];
+  const respawnMinutes = data.bosses[boss].respawn;
   const killTime = new Date();
   const respawnTime = new Date(killTime.getTime() + respawnMinutes * 60 * 1000);
   
@@ -141,7 +141,7 @@ app.post('/api/respawn', (req, res) => {
 });
 
 app.post('/api/boss', (req, res) => {
-  const { nome, tempo, kills } = req.body;
+  const { nome, tempo, kills, image } = req.body;
   
   if (!nome || !tempo) {
     return res.status(400).json({ error: 'Nome e tempo são obrigatórios' });
@@ -151,12 +151,33 @@ app.post('/api/boss', (req, res) => {
     return res.status(400).json({ error: 'Boss já existe' });
   }
   
-  data.bosses[nome] = parseInt(tempo);
+  data.bosses[nome] = {
+    respawn: parseInt(tempo),
+    image: image || ''
+  };
   data.kill_counts[nome] = parseInt(kills) || 0;
   
   saveData();
   
   res.json({ success: true, boss: nome });
+});
+
+app.post('/api/edit-boss', (req, res) => {
+  const { nome, respawn, image } = req.body;
+  
+  if (!nome || !data.bosses[nome]) {
+    return res.status(400).json({ error: 'Boss não encontrado' });
+  }
+  
+  if (respawn) {
+    data.bosses[nome].respawn = parseInt(respawn);
+  }
+  if (image !== undefined) {
+    data.bosses[nome].image = image;
+  }
+  
+  saveData();
+  res.json({ success: true });
 });
 
 app.delete('/api/boss', (req, res) => {
@@ -171,11 +192,9 @@ app.delete('/api/boss', (req, res) => {
   delete data.respawn_times[nome];
   delete activeTimers[nome];
   
-  // Remover do histórico também
   data.kill_history = data.kill_history.filter(h => h.boss !== nome);
   
   saveData();
-  
   res.json({ success: true });
 });
 
@@ -200,14 +219,12 @@ app.post('/api/clear-history', (req, res) => {
 
 // Função para iniciar timer
 function startTimer(boss, minutes) {
-  // Parar timer existente
   if (activeTimers[boss]) {
     clearInterval(activeTimers[boss].interval);
   }
   
   const endTime = new Date(Date.now() + minutes * 60 * 1000);
   
-  // Função para atualizar o timer
   const updateTimer = () => {
     const now = new Date();
     const remaining = Math.max(0, endTime.getTime() - now.getTime());
@@ -227,20 +244,15 @@ function startTimer(boss, minutes) {
       clearInterval(activeTimers[boss].interval);
       delete activeTimers[boss];
       
-      // Boss respawnou - salvar e notificar
       const now = new Date();
       data.respawn_times[boss] = now.toISOString();
       saveData();
-      
-      // Enviar notificação via API para o frontend
       console.log(`🔄 ${boss} respawnou!`);
     }
   };
   
-  // Atualizar imediatamente
   updateTimer();
   
-  // Configurar intervalo
   const interval = setInterval(updateTimer, 1000);
   activeTimers[boss] = {
     ...activeTimers[boss],
@@ -248,7 +260,7 @@ function startTimer(boss, minutes) {
   };
 }
 
-// Inicializar timers ao carregar
+// Inicializar timers
 function initializeTimers() {
   const now = new Date();
   for (const [boss, respawnTime] of Object.entries(data.respawn_times)) {
@@ -263,7 +275,6 @@ function initializeTimers() {
   }
 }
 
-// Inicializar timers
 initializeTimers();
 
 // Servir arquivos estáticos
