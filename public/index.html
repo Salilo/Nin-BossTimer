@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ Boss Timer Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            color: #8899bb;
+            font-size: 14px;
+        }
+        
+        .online-status {
+            display: inline-block;
+            background: #00ff00;
+            color: #000;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .controls button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 13px;
+        }
+        
+        .btn-add {
+            background: #006400;
+            color: white;
+        }
+        .btn-add:hover { background: #008000; }
+        
+        .btn-screenshot {
+            background: #006400;
+            color: white;
+        }
+        .btn-screenshot.off { background: #8b0000; }
+        .btn-screenshot:hover { filter: brightness(1.2); }
+        
+        .btn-webhook {
+            background: #1a1a8a;
+            color: white;
+        }
+        .btn-webhook:hover { background: #2a2aaa; }
+        
+        .btn-share {
+            background: #4a6fa5;
+            color: white;
+        }
+        .btn-share:hover { background: #5a7fb5; }
+        
+        .boss-grid {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .boss-grid h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+        
+        .boss-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            background: #1a2a4a;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #2a3a5e;
+            transition: all 0.3s;
+        }
+        
+        .boss-item:hover {
+            background: #1f2f5a;
+            border-color: #4a6a8e;
+        }
+        
+        .boss-name {
+            font-weight: bold;
+            color: #ffd700;
+            min-width: 120px;
+        }
+        
+        .boss-status {
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .boss-status.alive {
+            background: #006400;
+            color: #00ff00;
+        }
+        
+        .boss-status.dead {
+            background: #640000;
+            color: #ff4444;
+        }
+        
+        .boss-timer {
+            font-family: 'Consolas', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            min-width: 60px;
+        }
+        
+        .boss-timer.dead {
+            color: #ff4444;
+        }
+        
+        .boss-timer.alive {
+            color: #00ff00;
+        }
+        
+        .boss-kills {
+            color: #8899bb;
+            font-size: 13px;
+        }
+        
+        .boss-participants {
+            font-size: 12px;
+            color: #8899bb;
+        }
+        
+        .boss-actions {
+            display: flex;
+            gap: 5px;
+            margin-left: auto;
+        }
+        
+        .boss-actions button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .btn-kill {
+            background: #8b0000;
+            color: white;
+        }
+        .btn-kill:hover { background: #cc0000; }
+        
+        .btn-respawn {
+            background: #006400;
+            color: white;
+        }
+        .btn-respawn:hover { background: #008000; }
+        
+        .btn-edit {
+            background: #3a3a3a;
+            color: white;
+        }
+        .btn-edit:hover { background: #4a4a4a; }
+        
+        .btn-delete {
+            background: #8b0000;
+            color: white;
+        }
+        .btn-delete:hover { background: #cc0000; }
+        
+        .btn-participants {
+            background: #8B4513;
+            color: white;
+        }
+        .btn-participants:hover { background: #A0522D; }
+        
+        .status-section {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .status-section h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+        
+        .status-text {
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            background: #0a1a2a;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .modal h2 {
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+        
+        .modal label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #ccd;
+        }
+        
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #2a3a5e;
+            border-radius: 5px;
+            background: #0a1a2a;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .modal input:focus, .modal textarea:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+        
+        .modal .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal .btn-group button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            flex: 1;
+        }
+        
+        .btn-modal-save {
+            background: #006400;
+            color: white;
+        }
+        .btn-modal-save:hover { background: #008000; }
+        
+        .btn-modal-cancel {
+            background: #8b0000;
+            color: white;
+        }
+        .btn-modal-cancel:hover { background: #cc0000; }
+        
+        .config-path {
+            color: #667;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+        }
+        
+        .last-update {
+            color: #667;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .share-link {
+            background: #0a1a2a;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            word-break: break-all;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            color: #88aacc;
+            display: none;
+        }
+        
+        .share-link.visible {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            .controls button {
+                width: 100%;
+            }
+            .boss-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .boss-actions {
+                margin-left: 0;
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            .boss-actions button {
+                flex: 1;
+                min-width: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚔️ Boss Timer Manager</h1>
+            <div class="subtitle">Sistema colaborativo de timers</div>
+            <span class="online-status" id="onlineStatus">🟢 Online</span>
+        </div>
+        
+        <!-- Controles -->
+        <div class="controls">
+            <button class="btn-add" onclick="openAddBoss()">➕ Adicionar Boss</button>
+            <button class="btn-share" onclick="shareLink()">🔗 Compartilhar</button>
+            <button class="btn-webhook" onclick="setupWebhook()">⚙️ Configurar Notificações</button>
+        </div>
+        
+        <!-- Link de compartilhamento -->
+        <div class="share-link" id="shareLink"></div>
+        
+        <!-- Lista de Bosses -->
+        <div class="boss-grid">
+            <h2>👹 Bosses</h2>
+            <div id="bossList"></div>
+        </div>
+        
+        <!-- Status -->
+        <div class="status-section">
+            <h2>📊 Status dos Bosses</h2>
+            <div class="status-text" id="statusText">Carregando...</div>
+        </div>
+        
+        <!-- Timers -->
+        <div class="status-section">
+            <h2>⏱️ Timers Ativos</h2>
+            <div class="status-text" id="timersText">Nenhum timer ativo</div>
+        </div>
+        
+        <div class="last-update" id="lastUpdate">Atualizado: agora</div>
+        <div class="config-path">📁 Configurações salvas no servidor</div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent">
+            <!-- Conteúdo dinâmico -->
+        </div>
+    </div>
+    
+    <script>
+        // ===================== CONFIGURAÇÕES =====================
+        const API_URL = window.location.origin + '/api';
+        let refreshInterval = null;
+        let modalCallback = null;
+        
+        // ===================== FUNÇÕES PRINCIPAIS =====================
+        
+        async function fetchStatus() {
+            try {
+                const response = await fetch(API_URL + '/status');
+                const data = await response.json();
+                renderBosses(data);
+                renderStatus(data);
+                renderTimers(data);
+                document.getElementById('lastUpdate').textContent = 'Atualizado: ' + new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error('Erro ao buscar status:', error);
+                document.getElementById('onlineStatus').textContent = '🔴 Offline';
+                document.getElementById('onlineStatus').style.background = '#ff0000';
+            }
+        }
+        
+        function renderBosses(data) {
+            const list = document.getElementById('bossList');
+            list.innerHTML = '';
+            
+            const bossNames = Object.keys(data.bosses);
+            if (bossNames.length === 0) {
+                list.innerHTML = '<p style="color: #667; text-align: center;">Nenhum boss cadastrado</p>';
+                return;
+            }
+            
+            for (const nome of bossNames) {
+                const respawnTime = data.bosses[nome];
+                const kills = data.kill_counts[nome] || 0;
+                const isDead = data.timers && data.timers[nome] && data.timers[nome].isActive;
+                const participantes = data.participantes[nome] || [];
+                const timer = data.timers && data.timers[nome];
+                
+                let timerText = '🟢 Vivo';
+                let timerClass = 'alive';
+                let statusClass = 'alive';
+                let statusText = '🟢 Vivo';
+                
+                if (isDead) {
+                    const m = timer.minutes || 0;
+                    const s = timer.seconds || 0;
+                    timerText = `🔴 ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    timerClass = 'dead';
+                    statusClass = 'dead';
+                    statusText = '🔴 Morto';
+                }
+                
+                const div = document.createElement('div');
+                div.className = 'boss-item';
+                div.innerHTML = `
+                    <span class="boss-name">${nome}</span>
+                    <span class="boss-status ${statusClass}">${statusText}</span>
+                    <span class="boss-timer ${timerClass}">${timerText}</span>
+                    <span class="boss-kills">💀 ${kills}</span>
+                    ${participantes.length > 0 ? `<span class="boss-participants">👥 ${participantes.join(' ')}</span>` : ''}
+                    <span class="boss-participants">⏱️ ${respawnTime}min</span>
+                    <div class="boss-actions">
+                        ${!isDead ? `<button class="btn-kill" onclick="killBoss('${nome}')">☠️ Matar</button>` : ''}
+                        ${isDead ? `<button class="btn-respawn" onclick="respawnBoss('${nome}')">✅ Vivo</button>` : ''}
+                        <button class="btn-participants" onclick="editParticipants('${nome}')">👥</button>
+                        <button class="btn-edit" onclick="editKills('${nome}')">✏️</button>
+                        <button class="btn-delete" onclick="deleteBoss('${nome}')">🗑️</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            }
+        }
+        
+        function renderStatus(data) {
+            const text = document.getElementById('statusText');
+            let output = '';
+            for (const [nome, tempo] of Object.entries(data.bosses)) {
+                const kills = data.kill_counts[nome] || 0;
+                const isDead = data.timers && data.timers[nome] && data.timers[nome].isActive;
+                const status = isDead ? '🔴 Morto' : '🟢 Vivo';
+                const participantes = data.participantes[nome] || [];
+                const pings = participantes.length > 0 ? ` | 👥 ${participantes.join(' ')}` : '';
+                output += `${nome}: ${status} | 💀 ${kills} | ⏱️ ${tempo}min${pings}\n`;
+            }
+            text.textContent = output || 'Nenhum boss cadastrado';
+        }
+        
+        function renderTimers(data) {
+            const text = document.getElementById('timersText');
+            let output = '';
+            const timers = data.timers || {};
+            const bossNames = Object.keys(timers);
+            
+            if (bossNames.length === 0) {
+                text.textContent = 'Nenhum timer ativo';
+                return;
+            }
+            
+            for (const [nome, timer] of Object.entries(timers)) {
+                if (timer.isActive) {
+                    const m = timer.minutes || 0;
+                    const s = timer.seconds || 0;
+                    const kills = data.kill_counts[nome] || 0;
+                    const respawnTime = new Date(timer.endTime);
+                    output += `${nome}: ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} | 💀 ${kills} | ⏰ ${respawnTime.toLocaleTimeString()}\n`;
+                }
+            }
+            text.textContent = output || 'Nenhum timer ativo';
+        }
+        
+        // ===================== AÇÕES DOS BOSSES =====================
+        
+        async function killBoss(nome) {
+            if (!confirm(`☠️ Confirmar morte do ${nome}?`)) return;
+            
+            try {
+                const response = await fetch(API_URL + '/kill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ boss: nome })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    showNotification('☠️', `${nome} morto! Respawn em ${data.respawn_minutes}min`);
+                }
+            } catch (error) {
+                console.error('Erro ao matar boss:', error);
+            }
+        }
+        
+        async function respawnBoss(nome) {
+            try {
+                const response = await fetch(API_URL + '/respawn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ boss: nome })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    showNotification('✅', `${nome} respawnou!`);
+                }
+            } catch (error) {
+                console.error('Erro ao respawnar boss:', error);
+            }
+        }
+        
+        async function deleteBoss(nome) {
+            if (!confirm(`🗑️ Remover ${nome} permanentemente?`)) return;
+            
+            try {
+                const response = await fetch(API_URL + '/boss', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    fetchStatus();
+                    showNotification('🗑️', `${nome} removido!`);
+                }
+            } catch (error) {
+                console.error('Erro ao remover boss:', error);
+            }
+        }
+        
+        // ===================== EDIÇÃO =====================
+        
+        function editKills(nome) {
+            openModal(`
+                <h2>✏️ Editar Kills - ${nome}</h2>
+                <label>Número de kills:</label>
+                <input type="number" id="editKillsInput" min="0" value="${getKills(nome)}">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveKills('${nome}')">💾 Salvar</button>
+                </div>
+            `);
+        }
+        
+        async function saveKills(nome) {
+            const input = document.getElementById('editKillsInput');
+            const kills = parseInt(input.value);
+            if (isNaN(kills) || kills < 0) {
+                alert('Digite um número válido!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/edit-kills', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ boss: nome, kills })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    closeModal();
+                    fetchStatus();
+                    showNotification('✏️', `${nome} kills atualizadas para ${kills}`);
+                }
+            } catch (error) {
+                console.error('Erro ao editar kills:', error);
+            }
+        }
+        
+        function editParticipants(nome) {
+            const current = getParticipants(nome);
+            openModal(`
+                <h2>👥 Participantes - ${nome}</h2>
+                <label>Digite os @ separados por espaço:</label>
+                <input type="text" id="editParticipantsInput" value="${current.join(' ')}" placeholder="<@ID1> <@ID2>">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveParticipants('${nome}')">💾 Salvar</button>
+                </div>
+            `);
+        }
+        
+        async function saveParticipants(nome) {
+            const input = document.getElementById('editParticipantsInput');
+            const participantes = input.value.trim().split(/\s+/).filter(p => p);
+            
+            try {
+                const response = await fetch(API_URL + '/edit-participantes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ boss: nome, participantes })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    closeModal();
+                    fetchStatus();
+                    showNotification('👥', `${nome} participantes atualizados!`);
+                }
+            } catch (error) {
+                console.error('Erro ao editar participantes:', error);
+            }
+        }
+        
+        // ===================== ADICIONAR BOSS =====================
+        
+        function openAddBoss() {
+            openModal(`
+                <h2>➕ Adicionar Novo Boss</h2>
+                <label>👤 Nome do Boss:</label>
+                <input type="text" id="addBossNome" placeholder="Ex: Lich King">
+                <label>⏱️ Tempo de Respawn (minutos):</label>
+                <input type="number" id="addBossTempo" placeholder="5" min="1">
+                <label>💀 Kills iniciais:</label>
+                <input type="number" id="addBossKills" placeholder="0" min="0" value="0">
+                <label>👥 Participantes (separados por espaço):</label>
+                <input type="text" id="addBossParticipantes" placeholder="<@ID1> <@ID2>">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveNewBoss()">✅ Adicionar Boss</button>
+                </div>
+            `);
+            
+            // Auto-focus
+            setTimeout(() => document.getElementById('addBossNome')?.focus(), 100);
+        }
+        
+        async function saveNewBoss() {
+            const nome = document.getElementById('addBossNome').value.trim();
+            const tempo = parseInt(document.getElementById('addBossTempo').value);
+            const kills = parseInt(document.getElementById('addBossKills').value) || 0;
+            const participantes = document.getElementById('addBossParticipantes').value.trim().split(/\s+/).filter(p => p);
+            
+            if (!nome) {
+                alert('Digite um nome para o boss!');
+                return;
+            }
+            if (isNaN(tempo) || tempo <= 0) {
+                alert('Digite um tempo válido!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/boss', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, tempo, kills, participantes })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    closeModal();
+                    fetchStatus();
+                    showNotification('✅', `${nome} adicionado com sucesso!`);
+                } else {
+                    alert(data.error || 'Erro ao adicionar boss');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar boss:', error);
+            }
+        }
+        
+        // ===================== HELPERS =====================
+        
+        function getKills(nome) {
+            const statusText = document.getElementById('statusText').textContent;
+            const match = statusText.match(new RegExp(`${nome}:[^|]*\\| 💀 (\\d+)`));
+            return match ? parseInt(match[1]) : 0;
+        }
+        
+        function getParticipants(nome) {
+            const statusText = document.getElementById('statusText').textContent;
+            const match = statusText.match(new RegExp(`${nome}:[^|]*\\| 👥 ([^\\n]+)`));
+            if (match) {
+                return match[1].trim().split(/\s+/);
+            }
+            return [];
+        }
+        
+        // ===================== MODAL =====================
+        
+        function openModal(html) {
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+        
+        // Fechar modal clicando fora
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        // ===================== COMPARTILHAR =====================
+        
+        function shareLink() {
+            const link = document.getElementById('shareLink');
+            const url = window.location.href;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: '⚔️ Boss Timer',
+                    text: 'Gerencie os timers dos bosses comigo!',
+                    url: url
+                }).catch(() => {});
+                return;
+            }
+            
+            // Fallback: mostrar link
+            link.textContent = '🔗 ' + url;
+            link.classList.toggle('visible');
+            
+            if (link.classList.contains('visible')) {
+                // Copiar automaticamente
+                navigator.clipboard.writeText(url).then(() => {
+                    showNotification('📋', 'Link copiado para a área de transferência!');
+                }).catch(() => {});
+            }
+        }
+        
+        // ===================== WEBHOOK =====================
+        
+        function setupWebhook() {
+            openModal(`
+                <h2>⚙️ Configurar Webhook</h2>
+                <label>📨 URL do Webhook:</label>
+                <input type="url" id="webhookInput" placeholder="https://discord.com/api/webhooks/...">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveWebhook()">💾 Salvar Webhook</button>
+                </div>
+            `);
+        }
+        
+        function saveWebhook() {
+            const url = document.getElementById('webhookInput').value.trim();
+            if (url) {
+                localStorage.setItem('webhook_url', url);
+                closeModal();
+                showNotification('✅', 'Webhook configurado com sucesso!');
+                // Testar webhook
+                fetch('/api/test-webhook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ webhook: url })
+                }).catch(() => {});
+            } else {
+                alert('Digite uma URL válida!');
+            }
+        }
+        
+        // ===================== NOTIFICAÇÕES =====================
+        
+        function showNotification(icon, message) {
+            // Tentar notificação do navegador
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(icon + ' Boss Timer', { body: message });
+            }
+            
+            // Fallback: alert simplificado
+            const statusText = document.getElementById('statusText');
+            const originalText = statusText.textContent;
+            statusText.textContent = `${icon} ${message}\n\n${originalText}`;
+            setTimeout(() => {
+                statusText.textContent = originalText;
+            }, 5000);
+        }
+        
+        // Solicitar permissão para notificações
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
+        // ===================== INICIALIZAÇÃO =====================
+        
+        // Atualizar a cada 2 segundos
+        fetchStatus();
+        refreshInterval = setInterval(fetchStatus, 2000);
+        
+        // Atualizar ao focar a página
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                fetchStatus();
+            }
+        });
+        
+        console.log('⚔️ Boss Timer Manager iniciado!');
+        console.log('Compartilhe o link com seus amigos para colaborarem!');
+    </script>
+</body>
+</html>
