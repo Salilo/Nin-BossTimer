@@ -73,23 +73,21 @@
             font-weight: bold;
             transition: all 0.3s;
             font-size: 13px;
+            color: white;
         }
         
         .btn-add {
             background: #006400;
-            color: white;
         }
         .btn-add:hover { background: #008000; }
         
         .btn-clear-history {
             background: #8b0000;
-            color: white;
         }
         .btn-clear-history:hover { background: #cc0000; }
         
         .btn-notification {
             background: #4a6fa5;
-            color: white;
         }
         .btn-notification:hover { background: #5a7fb5; }
         
@@ -181,29 +179,26 @@
             cursor: pointer;
             font-size: 12px;
             transition: all 0.3s;
+            color: white;
         }
         
         .btn-kill {
             background: #8b0000;
-            color: white;
         }
         .btn-kill:hover { background: #cc0000; }
         
         .btn-respawn {
             background: #006400;
-            color: white;
         }
         .btn-respawn:hover { background: #008000; }
         
         .btn-edit {
             background: #3a3a3a;
-            color: white;
         }
         .btn-edit:hover { background: #4a4a4a; }
         
         .btn-delete {
             background: #8b0000;
-            color: white;
         }
         .btn-delete:hover { background: #cc0000; }
         
@@ -315,6 +310,88 @@
             margin-top: 20px;
             padding: 10px;
         }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #2a3a5e;
+        }
+        
+        .modal h2 {
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+        
+        .modal label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #ccd;
+        }
+        
+        .modal input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #2a3a5e;
+            border-radius: 5px;
+            background: #0a1a2a;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .modal input:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+        
+        .modal .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal .btn-group button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            flex: 1;
+            color: white;
+        }
+        
+        .btn-modal-save {
+            background: #006400;
+        }
+        .btn-modal-save:hover { background: #008000; }
+        
+        .btn-modal-cancel {
+            background: #8b0000;
+        }
+        .btn-modal-cancel:hover { background: #cc0000; }
         
         /* Notificação estilo Windows */
         .windows-notification {
@@ -444,9 +521,9 @@
     </div>
     
     <!-- Modal -->
-    <div class="modal-overlay" id="modalOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-        <div class="modal" style="background:#16213e; padding:30px; border-radius:12px; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; border:1px solid #2a3a5e;">
-            <div id="modalContent"></div>
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent">
+            <!-- Conteúdo dinâmico -->
         </div>
     </div>
     
@@ -483,13 +560,11 @@
             
             for (const [boss, timer] of Object.entries(timers)) {
                 if (timer.isActive && lastBossStates[boss] && !lastBossStates[boss].isActive) {
-                    // Boss respawnou!
                     showWindowsNotification('🔄 Boss Vivo!', `${boss} respawnou e está vivo!`);
                 }
                 lastBossStates[boss] = { isActive: timer.isActive };
             }
             
-            // Verificar bosses que não estão mais no timer (respawnaram)
             for (const [boss, state] of Object.entries(lastBossStates)) {
                 if (state.isActive && !timers[boss]) {
                     showWindowsNotification('🔄 Boss Vivo!', `${boss} respawnou e está vivo!`);
@@ -594,7 +669,6 @@
                 return;
             }
             
-            // Mostrar do mais recente para o mais antigo
             const reversed = [...history].reverse();
             let html = '';
             for (const item of reversed) {
@@ -619,7 +693,6 @@
         // ===================== NOTIFICAÇÕES WINDOWS =====================
         
         function showWindowsNotification(title, message) {
-            // Verificar se tem permissão
             if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification(title, {
                     body: message,
@@ -627,7 +700,6 @@
                 });
             }
             
-            // Notificação visual na página (fallback)
             const existing = document.querySelector('.windows-notification');
             if (existing) {
                 existing.remove();
@@ -641,7 +713,6 @@
             `;
             document.body.appendChild(notif);
             
-            // Remover após 5 segundos
             setTimeout(() => {
                 notif.style.animation = 'slideOut 0.5s ease';
                 setTimeout(() => notif.remove(), 500);
@@ -649,6 +720,7 @@
         }
         
         function testNotification() {
+            console.log('🔔 Testando notificação...');
             showWindowsNotification('🔔 Teste de Notificação', 'Isso é uma notificação de teste do Boss Timer!');
         }
         
@@ -670,6 +742,7 @@
                 }
             } catch (error) {
                 console.error('Erro ao matar boss:', error);
+                alert('Erro ao matar boss! Verifique o console.');
             }
         }
         
@@ -687,6 +760,7 @@
                 }
             } catch (error) {
                 console.error('Erro ao respawnar boss:', error);
+                alert('Erro ao respawnar boss! Verifique o console.');
             }
         }
         
@@ -706,19 +780,21 @@
                 }
             } catch (error) {
                 console.error('Erro ao remover boss:', error);
+                alert('Erro ao remover boss! Verifique o console.');
             }
         }
         
         // ===================== EDIÇÃO =====================
         
         function editKills(nome) {
+            const currentKills = getKillsFromStatus(nome);
             openModal(`
-                <h2 style="color:#ffd700;">✏️ Editar Kills - ${nome}</h2>
-                <label style="display:block; margin:10px 0 5px; font-weight:bold; color:#ccd;">Número de kills:</label>
-                <input type="number" id="editKillsInput" min="0" value="${getKillsFromStatus(nome)}" style="width:100%; padding:10px; border:1px solid #2a3a5e; border-radius:5px; background:#0a1a2a; color:white; font-size:14px;">
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button class="btn-modal-cancel" onclick="closeModal()" style="flex:1; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; background:#8b0000; color:white;">❌ Cancelar</button>
-                    <button class="btn-modal-save" onclick="saveKills('${nome}')" style="flex:1; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; background:#006400; color:white;">💾 Salvar</button>
+                <h2>✏️ Editar Kills - ${nome}</h2>
+                <label>Número de kills:</label>
+                <input type="number" id="editKillsInput" min="0" value="${currentKills}">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveKills('${nome}')">💾 Salvar</button>
                 </div>
             `);
         }
@@ -731,6 +807,10 @@
         
         async function saveKills(nome) {
             const input = document.getElementById('editKillsInput');
+            if (!input) {
+                alert('Erro: campo não encontrado!');
+                return;
+            }
             const kills = parseInt(input.value);
             if (isNaN(kills) || kills < 0) {
                 alert('Digite um número válido!');
@@ -751,40 +831,57 @@
                 }
             } catch (error) {
                 console.error('Erro ao editar kills:', error);
+                alert('Erro ao editar kills! Verifique o console.');
             }
         }
         
         // ===================== ADICIONAR BOSS =====================
         
         function openAddBoss() {
+            console.log('📝 Abrindo modal de adicionar boss...');
             openModal(`
-                <h2 style="color:#ffd700;">➕ Adicionar Novo Boss</h2>
-                <label style="display:block; margin:10px 0 5px; font-weight:bold; color:#ccd;">👤 Nome do Boss:</label>
-                <input type="text" id="addBossNome" placeholder="Ex: Lich King" style="width:100%; padding:10px; border:1px solid #2a3a5e; border-radius:5px; background:#0a1a2a; color:white; font-size:14px;">
-                <label style="display:block; margin:10px 0 5px; font-weight:bold; color:#ccd;">⏱️ Tempo de Respawn (minutos):</label>
-                <input type="number" id="addBossTempo" placeholder="5" min="1" style="width:100%; padding:10px; border:1px solid #2a3a5e; border-radius:5px; background:#0a1a2a; color:white; font-size:14px;">
-                <label style="display:block; margin:10px 0 5px; font-weight:bold; color:#ccd;">💀 Kills iniciais:</label>
-                <input type="number" id="addBossKills" placeholder="0" min="0" value="0" style="width:100%; padding:10px; border:1px solid #2a3a5e; border-radius:5px; background:#0a1a2a; color:white; font-size:14px;">
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button class="btn-modal-cancel" onclick="closeModal()" style="flex:1; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; background:#8b0000; color:white;">❌ Cancelar</button>
-                    <button class="btn-modal-save" onclick="saveNewBoss()" style="flex:1; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; background:#006400; color:white;">✅ Adicionar Boss</button>
+                <h2>➕ Adicionar Novo Boss</h2>
+                <label>👤 Nome do Boss:</label>
+                <input type="text" id="addBossNome" placeholder="Ex: Lich King">
+                <label>⏱️ Tempo de Respawn (minutos):</label>
+                <input type="number" id="addBossTempo" placeholder="5" min="1">
+                <label>💀 Kills iniciais:</label>
+                <input type="number" id="addBossKills" placeholder="0" min="0" value="0">
+                <div class="btn-group">
+                    <button class="btn-modal-cancel" onclick="closeModal()">❌ Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveNewBoss()">✅ Adicionar Boss</button>
                 </div>
             `);
             
-            setTimeout(() => document.getElementById('addBossNome')?.focus(), 100);
+            setTimeout(() => {
+                const input = document.getElementById('addBossNome');
+                if (input) input.focus();
+            }, 100);
         }
         
         async function saveNewBoss() {
-            const nome = document.getElementById('addBossNome').value.trim();
-            const tempo = parseInt(document.getElementById('addBossTempo').value);
-            const kills = parseInt(document.getElementById('addBossKills').value) || 0;
+            console.log('💾 Salvando novo boss...');
+            const nomeInput = document.getElementById('addBossNome');
+            const tempoInput = document.getElementById('addBossTempo');
+            const killsInput = document.getElementById('addBossKills');
+            
+            if (!nomeInput || !tempoInput || !killsInput) {
+                alert('Erro: campos do formulário não encontrados!');
+                return;
+            }
+            
+            const nome = nomeInput.value.trim();
+            const tempo = parseInt(tempoInput.value);
+            const kills = parseInt(killsInput.value) || 0;
             
             if (!nome) {
                 alert('Digite um nome para o boss!');
+                nomeInput.focus();
                 return;
             }
             if (isNaN(tempo) || tempo <= 0) {
                 alert('Digite um tempo válido!');
+                tempoInput.focus();
                 return;
             }
             
@@ -804,6 +901,7 @@
                 }
             } catch (error) {
                 console.error('Erro ao adicionar boss:', error);
+                alert('Erro ao adicionar boss! Verifique o console.');
             }
         }
         
@@ -824,18 +922,24 @@
                 }
             } catch (error) {
                 console.error('Erro ao limpar histórico:', error);
+                alert('Erro ao limpar histórico! Verifique o console.');
             }
         }
         
         // ===================== MODAL =====================
         
         function openModal(html) {
-            document.getElementById('modalContent').innerHTML = html;
-            document.getElementById('modalOverlay').style.display = 'flex';
+            const overlay = document.getElementById('modalOverlay');
+            const content = document.getElementById('modalContent');
+            content.innerHTML = html;
+            overlay.classList.add('active');
+            overlay.style.display = 'flex';
         }
         
         function closeModal() {
-            document.getElementById('modalOverlay').style.display = 'none';
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('active');
+            overlay.style.display = 'none';
         }
         
         // Fechar modal clicando fora
@@ -867,6 +971,7 @@
         
         console.log('⚔️ Boss Timer Manager iniciado!');
         console.log('🔔 Notificações ativadas para quando os bosses respawnarem');
+        console.log('📝 Para adicionar boss, clique em "Adicionar Boss"');
     </script>
 </body>
 </html>
